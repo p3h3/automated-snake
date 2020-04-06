@@ -3,7 +3,7 @@
 #include <gccore.h>
 #include <wiiuse/wpad.h>
 
-// Setting
+// Settings
 #define gridTileSize 16
 #define gridSize 16
 #define width 640
@@ -24,18 +24,23 @@ bool inGame = false;
 bool paused = false;
 int score = 0;
 
+// Other variables needed for running
+int dx = 1;
+int dy = 0;
+int framerateDevideCounter = 0;
+
 // Initialise snake
 int snakeLength = 4;
-int snake_cells[gridSize*gridSize][2];
+int snake[gridSize*gridSize][2];
 
 void initialiseSnake(){
 	for(int i = 0; i < gridSize*gridSize; i++){
-		snake_cells[i][0] = 0; // Reset x
-		snake_cells[i][1] = 0; // Reset y
+		snake[i][0] = 0; // Reset x
+		snake[i][1] = 0; // Reset y
 	}
 	for(int i = 0; i < snakeLength; i++){
-		snake_cells[i][0] = i; // Initialise x
-		snake_cells[i][1] = 0; // Initialise y
+		snake[i][0] = i + 1; // Initialise x
+		snake[i][1] = 1; // Initialise y
 	}
 }
 
@@ -77,11 +82,6 @@ void drawSolidBox(int x1, int y1, int x2, int y2, int color){
 	for(int i = y1; i <= y2; i++){
 		drawHLine(x1, x2, i, color);
 	}
-}
-
-// To be implemented
-void resetGameData(){
-	
 }
 
 //---------------------------------------------------------------------------------
@@ -138,12 +138,49 @@ int main(int argc, char **argv) {
 			pointCursor(4, 0);
 			printf("Score: %d", score);
 			
+			//Check for movement updates
+			if(pressed & WPAD_BUTTON_UP){
+				dx = 0;
+				dy = -1;
+			}
+			if(pressed & WPAD_BUTTON_DOWN){
+				dx = 0;
+				dy = 1;
+			}
+			if(pressed & WPAD_BUTTON_RIGHT){
+				dx = 1;
+				dy = 0;
+			}
+			if(pressed & WPAD_BUTTON_LEFT){
+				dx = -1;
+				dy = 0;
+			}
+			
+			// Only updating snake cell positions every 8 frames
+			framerateDevideCounter++;
+			if(framerateDevideCounter % 8 == 0){
+				// Move snake cell positions
+				snake[0][0] += dx;
+				snake[0][1] += dy;
+				// Keeping the snake in the grid
+				if(snake[0][0] >= gridSize) snake[0][0] = 0;
+				if(snake[0][1] >= gridSize) snake[0][1] = 0;
+				if(snake[0][0] < 0)         snake[0][0] = gridSize-1;
+				if(snake[0][1] < 0)         snake[0][1] = gridSize-1;
+				// Moving all snake cells into their next cells' positions
+				for(int i = 1; i < snakeLength; i++){
+					snake[i][0] = snake[i-1][0];
+					snake[i][1] = snake[i-1][1];
+				}
+				framerateDevideCounter = 0;
+			}
+			
 			// Draw the snake's cells
 			for(int i = 0; i < snakeLength; i++){
-				drawSolidBox(convertGridToX(snake_cells[i][0]),
-							 convertGridToY(snake_cells[i][1]),
-							 convertGridToX(snake_cells[i][0]) + gridTileSize,
-							 convertGridToY(snake_cells[i][1]) + gridTileSize,
+				drawSolidBox(convertGridToX(snake[i][0]),
+							 convertGridToY(snake[i][1]),
+							 convertGridToX(snake[i][0]) + gridTileSize,
+							 convertGridToY(snake[i][1]) + gridTileSize,
 							 COLOR_GREEN);
 			}
 			
@@ -185,7 +222,7 @@ int main(int argc, char **argv) {
 			
 			//Checking to go back to the main menu
 			if(pressed & WPAD_BUTTON_B){
-				resetGameData();
+				initialiseSnake();
 				paused = false;
 			}
 			
@@ -201,9 +238,6 @@ int main(int argc, char **argv) {
 			pointCursor(10, 10);
 			printf("Please press the HOME button to exit this application.");
 			
-			// Draw small box at WiiMote's Cursor position
-			drawSolidBox(ir.x, ir.y, ir.x+3, ir.y+3, COLOR_WHITE);
-			
 			// Exit the application when the HOME button is pressed
 			if(pressed & WPAD_BUTTON_HOME) exit(0);
 			
@@ -213,6 +247,9 @@ int main(int argc, char **argv) {
 				inGame = true;
 			}
 		}
+		
+		// Draw small box at WiiMote's Cursor position => always nice to have
+		drawSolidBox(ir.x, ir.y, ir.x+3, ir.y+3, COLOR_WHITE);
 
 		// Wait for the next frame
 		VIDEO_WaitVSync();
