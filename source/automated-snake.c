@@ -3,14 +3,14 @@
 #include <gccore.h>
 #include <wiiuse/wpad.h>
 
+// Setting
+#define gridTileSize 16
+#define gridSize 16
+#define width 640
+#define height 480
+
 static void *xfb = NULL;
 static GXRModeObj *rmode = NULL;
-
-// Setting
-const int gridTileSize = 16;
-const int gridSize = 16;
-const int width = 640;
-const int height = 480;
 
 // Cursor potitions for the first WiiMote
 int cursorX = 0;
@@ -23,6 +23,28 @@ ir_t ir;
 bool inGame = false;
 bool paused = false;
 int score = 0;
+
+// Initialise snake
+int snakeLength = 4;
+int snake_cells[gridSize*gridSize][2];
+
+void initialiseSnake(){
+	for(int i = 0; i < gridSize*gridSize; i++){
+		snake_cells[i][0] = 0; // Reset x
+		snake_cells[i][1] = 0; // Reset y
+	}
+	for(int i = 0; i < snakeLength; i++){
+		snake_cells[i][0] = i; // Initialise x
+		snake_cells[i][1] = 0; // Initialise y
+	}
+}
+
+int convertGridToX(int gridX){
+	return (width/2 - (gridSize/2)*gridTileSize) + gridX * gridTileSize;
+}
+int convertGridToY(int gridY){
+	return (height/2 - (gridSize/2)*gridTileSize) + gridY * gridTileSize;
+}
 
 void pointCursor(int row, int column){
 	// The console understands VT terminal escape codes
@@ -116,7 +138,21 @@ int main(int argc, char **argv) {
 			pointCursor(4, 0);
 			printf("Score: %d", score);
 			
-			// PLACEHOLDER
+			// Draw the snake's cells
+			for(int i = 0; i < snakeLength; i++){
+				drawSolidBox(convertGridToX(snake_cells[i][0]),
+							 convertGridToY(snake_cells[i][1]),
+							 convertGridToX(snake_cells[i][0]) + gridTileSize,
+							 convertGridToY(snake_cells[i][1]) + gridTileSize,
+							 COLOR_GREEN);
+			}
+			
+			// Draw a Grid
+			for(int i = 0; i < gridSize; i++){
+				for(int j = 0; j < gridSize; j++){
+					drawBox(convertGridToX(i), convertGridToY(j), convertGridToX(i+1), convertGridToY(j+1), COLOR_WHITE);
+				}
+			}
 			
 			// Exit the application when the HOME button is pressed
 			if(pressed & WPAD_BUTTON_HOME){
@@ -173,6 +209,7 @@ int main(int argc, char **argv) {
 			
 			// Checking to start the Game
 			if(pressed & WPAD_BUTTON_A){
+				initialiseSnake();
 				inGame = true;
 			}
 		}
