@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<app version="1">
+	<name>Snake</name>
+	<coder>Peter Heynmöller</coder>
+	<version>0.1</version>
+	<short_description>this is a test</short_description> 
+	<long_description>This is a try at programming a rigged version of snake</long_description> 
+</app>

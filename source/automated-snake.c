@@ -6,6 +6,62 @@
 static void *xfb = NULL;
 static GXRModeObj *rmode = NULL;
 
+// Setting
+const int gridTileSize = 16;
+const int gridSize = 16;
+const int width = 640;
+const int height = 480;
+
+// Cursor potitions for the first WiiMote
+int cursorX = 0;
+int cursorY = 0;
+
+// Data structure for the WiiMote IR
+ir_t ir;
+
+// Game state variables
+bool inGame = false;
+bool paused = false;
+int score = 0;
+
+void pointCursor(int row, int column){
+	// The console understands VT terminal escape codes
+	printf ("\x1b[%d;%dH", row, column);
+}
+
+void drawHLine(int x1, int x2, int y, int color){
+	y *= 320;
+	x1 >>= 1;
+	x2 >>= 1;
+	for (int i = x1; i <= x2; i++){
+		u32 * tempfb = xfb;
+		tempfb[y+i] = color;
+	}
+}
+void drawVLine(int x, int y1, int y2, int color){
+	x >>= 1;
+	for (int i = y1; i <= y2; i++){
+		u32 * tempfb = xfb;
+		tempfb[x + (640*i)/2] = color;
+	}
+}
+void drawBox(int x1, int y1, int x2, int y2, int color){
+	drawHLine(x1, x2, y1, color);
+	drawHLine(x1, x2, y2, color);
+	drawVLine(x1, y1, y2, color);
+	drawVLine(x2, y1, y2, color);
+}
+void drawSolidBox(int x1, int y1, int x2, int y2, int color){
+	for(int i = y1; i <= y2; i++){
+		drawHLine(x1, x2, i, color);
+	}
+}
+
+// To be implemented
+void resetGameData(){
+	
+}
+
 //---------------------------------------------------------------------------------
 int main(int argc, char **argv) {
 //---------------------------------------------------------------------------------
@@ -15,9 +71,10 @@ int main(int argc, char **argv) {
 
 	// This function initialises the attached controllers
 	WPAD_Init();
+	WPAD_SetVRes(0, 640, 480);
+	WPAD_SetDataFormat(WPAD_CHAN_0, WPAD_FMT_BTNS_ACC_IR);
 
 	// Obtain the preferred video mode from the system
-	// This will correspond to the settings in the Wii menu
 	rmode = VIDEO_GetPreferredMode(NULL);
 
 	// Allocate memory for the display in the uncached region
@@ -42,27 +99,83 @@ int main(int argc, char **argv) {
 	VIDEO_WaitVSync();
 	if(rmode->viTVMode&VI_NON_INTERLACE) VIDEO_WaitVSync();
 
-
-	// The console understands VT terminal escape codes
-	// This positions the cursor on row 2, column 0
-	// we can use variables for this with format codes too
-	// e.g. printf ("\x1b[%d;%dH", row, column );
-	printf("\x1b[2;0H");
-
-
-	printf("Hello World!");
-
 	while(1) {
 
-		// Call WPAD_ScanPads each loop, this reads the latest controller states
+		// Updates the controller states
 		WPAD_ScanPads();
-
-		// WPAD_ButtonsDown tells us which buttons were pressed in this loop
-		// this is a "one shot" state which will not fire again until the button has been released
 		u32 pressed = WPAD_ButtonsDown(0);
-
-		// We return to the launcher application via exit
-		if ( pressed & WPAD_BUTTON_HOME ) exit(0);
+		
+		// Updates IR cursor movement
+		WPAD_IR(0, &ir);
+		
+		if(inGame){
+			// Making the framebuffer black
+			VIDEO_ClearFrameBuffer(rmode, xfb, COLOR_BLACK);
+			
+			// Game
+			pointCursor(4, 0);
+			printf("Score: %d", score);
+			
+			// PLACEHOLDER
+			
+			// Exit the application when the HOME button is pressed
+			if(pressed & WPAD_BUTTON_HOME){
+				paused = true;
+				inGame = false;
+			}
+			
+		}else if(paused){
+			// Clear Frame Buffer
+			VIDEO_ClearFrameBuffer(rmode, xfb, COLOR_GREEN);
+			
+			// Display pause message
+			pointCursor(6, 10);
+			printf("PAUSED");
+			pointCursor(8, 10);
+			printf("Press the A button to resume.");
+			pointCursor(10, 10);
+			printf("Press the B button to return to the main menu.");
+			pointCursor(12, 10);
+			printf("Press the HOME button to exit this application.");
+			
+			// Exit the application when the HOME button is pressed
+			if(pressed & WPAD_BUTTON_HOME) exit(0);
+			
+			// Checking to return to the game
+			if(pressed & WPAD_BUTTON_A){
+				paused = false;
+				inGame = true;
+			}
+			
+			//Checking to go back to the main menu
+			if(pressed & WPAD_BUTTON_B){
+				resetGameData();
+				paused = false;
+			}
+			
+		}else{
+			// Clear Frame Buffer
+			VIDEO_ClearFrameBuffer(rmode, xfb, COLOR_GREEN);
+		
+			// Display welcome message
+			pointCursor(6, 10);
+			printf("Hey, this is a snake ripoff.");
+			pointCursor(8, 10);
+			printf("Please press the A button to start the game.");
+			pointCursor(10, 10);
+			printf("Please press the HOME button to exit this application.");
+			
+			// Draw small box at WiiMote's Cursor position
+			drawSolidBox(ir.x, ir.y, ir.x+3, ir.y+3, COLOR_WHITE);
+			
+			// Exit the application when the HOME button is pressed
+			if(pressed & WPAD_BUTTON_HOME) exit(0);
+			
+			// Checking to start the Game
+			if(pressed & WPAD_BUTTON_A){
+				inGame = true;
+			}
+		}
 
 		// Wait for the next frame
 		VIDEO_WaitVSync();
