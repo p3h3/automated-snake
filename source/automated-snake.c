@@ -8,6 +8,7 @@
 #define gridSize 16
 #define width 640
 #define height 480
+#define initialSnakeLength 4
 
 static void *xfb = NULL;
 static GXRModeObj *rmode = NULL;
@@ -29,10 +30,14 @@ int dx = 0;
 int dy = 1;
 int framerateDevideCounter = 0;
 
-// Initialise snake
-int snakeLength = 4;
+// Create apple
+int apple[2];
+
+// Create snake
+int snakeLength = initialSnakeLength;
 int snake[gridSize*gridSize][2];
 
+// Function to reset the snake array
 void initialiseSnake(){
 	for(int i = 0; i < gridSize*gridSize; i++){
 		snake[i][0] = 0; // Reset x
@@ -44,6 +49,12 @@ void initialiseSnake(){
 		snake[i][0] = i + 1; // Initialise x
 		snake[i][1] = 1; // Initialise y
 	}
+}
+
+// Set new random apple position
+void newApplePosition(){
+	apple[0] = rand() % gridSize; // Setting x
+	apple[1] = rand() % gridSize; // Setting y
 }
 
 int convertGridToX(int gridX){
@@ -133,6 +144,9 @@ int main(int argc, char **argv) {
 		WPAD_IR(0, &ir);
 		
 		if(inGame){
+			// Making snake longer based on increased score
+			snakeLength = initialSnakeLength + score;
+		
 			// Making the framebuffer black
 			VIDEO_ClearFrameBuffer(rmode, xfb, COLOR_BLACK);
 			
@@ -175,18 +189,24 @@ int main(int argc, char **argv) {
 				if(snake[0][0] < 0)         snake[0][0] = gridSize-1;
 				if(snake[0][1] < 0)         snake[0][1] = gridSize-1;
 				
-				// Checking for Collisions
-				bool died = false;
+				// Checking for collisions within the snake
 				for(int i = 1; i < snakeLength; i++){
 					for(int j = i+1; j < snakeLength; j++){
 						if((snake[i][0] == snake[j][0]) && (snake[i][1] == snake[j][1])){
-							died = true;
+							score = 0;
+							snakeLength = initialSnakeLength;
+							paused = false;
+							inGame = false;
 						}
 					}
 				}
-				if(died){
-					paused = false;
-					inGame = false;
+				
+				// Check for "collision" with apple
+				for(int i = 0; i < snakeLength; i++){
+					if((snake[i][0] == apple[0]) && (snake[i][1] == apple[1])){
+						score++;
+						newApplePosition();
+					}
 				}
 				
 				framerateDevideCounter = 0;
@@ -207,6 +227,13 @@ int main(int argc, char **argv) {
 								COLOR_YELLOW);
 				}
 			}
+			
+			// Draw the apple
+			drawSolidBox(convertGridToX(apple[0]),
+						 convertGridToY(apple[1]),
+						 convertGridToX(apple[0]) + gridTileSize,
+						 convertGridToY(apple[1]) + gridTileSize,
+						 COLOR_RED);
 			
 			// Draw a Grid
 			for(int i = 0; i < gridSize; i++){
@@ -268,6 +295,7 @@ int main(int argc, char **argv) {
 			// Checking to start the Game
 			if(pressed & WPAD_BUTTON_A){
 				initialiseSnake();
+				newApplePosition();
 				inGame = true;
 			}
 		}
