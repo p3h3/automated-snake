@@ -25,8 +25,8 @@ bool paused = false;
 int score = 0;
 
 // Other variables needed for running
-int dx = 1;
-int dy = 0;
+int dx = 0;
+int dy = 1;
 int framerateDevideCounter = 0;
 
 // Initialise snake
@@ -38,6 +38,8 @@ void initialiseSnake(){
 		snake[i][0] = 0; // Reset x
 		snake[i][1] = 0; // Reset y
 	}
+	dx = 0;
+	dy = 1;
 	for(int i = 0; i < snakeLength; i++){
 		snake[i][0] = i + 1; // Initialise x
 		snake[i][1] = 1; // Initialise y
@@ -159,6 +161,11 @@ int main(int argc, char **argv) {
 			// Only updating snake cell positions every 8 frames
 			framerateDevideCounter++;
 			if(framerateDevideCounter % 8 == 0){
+				// Moving all snake cells into their next cells' positions
+				for(int i = snakeLength-1; i >= 1; i--){
+					snake[i][0] = snake[i-1][0];
+					snake[i][1] = snake[i-1][1];
+				}
 				// Move snake cell positions
 				snake[0][0] += dx;
 				snake[0][1] += dy;
@@ -167,11 +174,21 @@ int main(int argc, char **argv) {
 				if(snake[0][1] >= gridSize) snake[0][1] = 0;
 				if(snake[0][0] < 0)         snake[0][0] = gridSize-1;
 				if(snake[0][1] < 0)         snake[0][1] = gridSize-1;
-				// Moving all snake cells into their next cells' positions
+				
+				// Checking for Collisions
+				bool died = false;
 				for(int i = 1; i < snakeLength; i++){
-					snake[i][0] = snake[i-1][0];
-					snake[i][1] = snake[i-1][1];
+					for(int j = i+1; j < snakeLength; j++){
+						if((snake[i][0] == snake[j][0]) && (snake[i][1] == snake[j][1])){
+							died = true;
+						}
+					}
 				}
+				if(died){
+					paused = false;
+					inGame = false;
+				}
+				
 				framerateDevideCounter = 0;
 			}
 			
@@ -182,6 +199,13 @@ int main(int argc, char **argv) {
 							 convertGridToX(snake[i][0]) + gridTileSize,
 							 convertGridToY(snake[i][1]) + gridTileSize,
 							 COLOR_GREEN);
+				if(i == 0){
+					drawSolidBox(convertGridToX(snake[i][0]),
+								convertGridToY(snake[i][1]),
+								convertGridToX(snake[i][0]) + gridTileSize,
+								convertGridToY(snake[i][1]) + gridTileSize,
+								COLOR_YELLOW);
+				}
 			}
 			
 			// Draw a Grid
