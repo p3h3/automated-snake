@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <gccore.h>
 #include <wiiuse/wpad.h>
+#include "hamiltonian-cycle.h"
 
 // Settings
 #define gridTileSize 16
@@ -28,24 +29,24 @@ int score = 0;
 // Other variables needed for running
 int dx = 0;
 int dy = 1;
-int framerateDevideCounter = 0;
+unsigned int framerateDevideCounter = 0;
 
 // Create apple
 int apple[2];
 
 // Create snake
-int snakeLength = initialSnakeLength;
+unsigned int snakeLength = initialSnakeLength;
 int snake[gridSize*gridSize][2];
 
 // Function to reset the snake array
 void initialiseSnake(){
-	for(int i = 0; i < gridSize*gridSize; i++){
+	for(unsigned int i = 0; i < gridSize*gridSize; i++){
 		snake[i][0] = 0; // Reset x
 		snake[i][1] = 0; // Reset y
 	}
 	dx = 0;
 	dy = 1;
-	for(int i = 0; i < snakeLength; i++){
+	for(unsigned int i = 0; i < snakeLength; i++){
 		snake[i][0] = i + 1; // Initialise x
 		snake[i][1] = 1; // Initialise y
 	}
@@ -97,9 +98,37 @@ void drawSolidBox(int x1, int y1, int x2, int y2, int color){
 	}
 }
 
+// Doesn't do anything useful yet..
+static void print_circuit(const unsigned int *circuit, size_t len) {
+    for (unsigned int v = 0; v < len; v++) {
+        printf("%d ", circuit[v]);
+    }
+    putchar('\n');
+}
+
 //---------------------------------------------------------------------------------
 int main(int argc, char **argv) {
 //---------------------------------------------------------------------------------
+
+	unsigned int **adjmat;
+ 
+    // Create a map the size of the grid
+    adjmat = malloc(gridSize * sizeof(unsigned int *));
+    for (unsigned int i = 0; i < gridSize; i++) {
+        adjmat[i] = malloc(gridSize * sizeof(unsigned int));
+        for (unsigned int j = 0; j < gridSize; j++) {
+            adjmat[i][j] = 1;
+        }
+    }
+	
+	// Calculate all possible Hamiltonian Circle Paths
+    hamiltonian_circuits(adjmat, gridSize, print_circuit);
+	
+	// Deallocating no longer needed variable
+    for (unsigned int i = 0; i < gridSize; i++) {
+        free(adjmat[i]);
+    }
+    free(adjmat);
 
 	// Initialise the video system
 	VIDEO_Init();
@@ -176,7 +205,7 @@ int main(int argc, char **argv) {
 			framerateDevideCounter++;
 			if(framerateDevideCounter % 8 == 0){
 				// Moving all snake cells into their next cells' positions
-				for(int i = snakeLength-1; i >= 1; i--){
+				for(unsigned int i = snakeLength-1; i >= 1; i--){
 					snake[i][0] = snake[i-1][0];
 					snake[i][1] = snake[i-1][1];
 				}
@@ -190,8 +219,8 @@ int main(int argc, char **argv) {
 				if(snake[0][1] < 0)         snake[0][1] = gridSize-1;
 				
 				// Checking for collisions within the snake
-				for(int i = 1; i < snakeLength; i++){
-					for(int j = i+1; j < snakeLength; j++){
+				for(unsigned int i = 1; i < snakeLength; i++){
+					for(unsigned int j = i+1; j < snakeLength; j++){
 						if((snake[i][0] == snake[j][0]) && (snake[i][1] == snake[j][1])){
 							score = 0;
 							snakeLength = initialSnakeLength;
@@ -202,7 +231,7 @@ int main(int argc, char **argv) {
 				}
 				
 				// Check for "collision" with apple
-				for(int i = 0; i < snakeLength; i++){
+				for(unsigned int i = 0; i < snakeLength; i++){
 					if((snake[i][0] == apple[0]) && (snake[i][1] == apple[1])){
 						score++;
 						newApplePosition();
@@ -213,7 +242,7 @@ int main(int argc, char **argv) {
 			}
 			
 			// Draw the snake's cells
-			for(int i = 0; i < snakeLength; i++){
+			for(unsigned int i = 0; i < snakeLength; i++){
 				drawSolidBox(convertGridToX(snake[i][0]),
 							 convertGridToY(snake[i][1]),
 							 convertGridToX(snake[i][0]) + gridTileSize,
@@ -236,8 +265,8 @@ int main(int argc, char **argv) {
 						 COLOR_RED);
 			
 			// Draw a Grid
-			for(int i = 0; i < gridSize; i++){
-				for(int j = 0; j < gridSize; j++){
+			for(unsigned int i = 0; i < gridSize; i++){
+				for(unsigned int j = 0; j < gridSize; j++){
 					drawBox(convertGridToX(i), convertGridToY(j), convertGridToX(i+1), convertGridToY(j+1), COLOR_WHITE);
 				}
 			}
